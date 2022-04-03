@@ -1,3 +1,5 @@
+#include "Arduino.h"
+
 extern "C" uint8_t external_psram_size;
 
 bool memory_ok = false;
@@ -11,11 +13,11 @@ void setup()
 	while (!Serial) ; // wait
 	pinMode(13, OUTPUT);
 	uint8_t size = external_psram_size;
-	Serial.printf("EXTMEM Memory Test, %d Mbyte\n", size);
+	Serial.printf("EXTMEM Memory Test, %d Mbyte\r\n", size);
 	if (size == 0) return;
 	const float clocks[4] = {396.0f, 720.0f, 664.62f, 528.0f};
 	const float frequency = clocks[(CCM_CBCMR >> 8) & 3] / (float)(((CCM_CBCMR >> 29) & 7) + 1);
-	Serial.printf(" CCM_CBCMR=%08X (%.1f MHz)\n", CCM_CBCMR, frequency);
+	Serial.printf(" CCM_CBCMR=%08X (%.1f MHz)\r\n", CCM_CBCMR, frequency);
 	memory_begin = (uint32_t *)(0x70000000);
 	memory_end = (uint32_t *)(0x70000000 + size * 1048576);
 	elapsedMillis msec = 0;
@@ -76,14 +78,14 @@ void setup()
 	if (!check_fixed_pattern(0xFFFF0000)) return;
 	if (!check_fixed_pattern(0xFFFFFFFF)) return;
 	if (!check_fixed_pattern(0x00000000)) return;
-	Serial.printf(" test ran for %.2f seconds\n", (float)msec / 1000.0f);
+	Serial.printf(" test ran for %.2f seconds\r\n", (float)msec / 1000.0f);
 	Serial.println("All memory tests passed :-)");
 	memory_ok = true;
 }
 
 bool fail_message(volatile uint32_t *location, uint32_t actual, uint32_t expected)
 {
-	Serial.printf(" Error at %08X, read %08X but expected %08X\n",
+	Serial.printf(" Error at %08X, read %08X but expected %08X\r\n",
 		(uint32_t)location, actual, expected);
 	return false;
 }
@@ -92,7 +94,7 @@ bool fail_message(volatile uint32_t *location, uint32_t actual, uint32_t expecte
 bool check_fixed_pattern(uint32_t pattern)
 {
 	volatile uint32_t *p;
-	Serial.printf("testing with fixed pattern %08X\n", pattern);
+	Serial.printf("testing with fixed pattern %08X\r\n", pattern);
 	for (p = memory_begin; p < memory_end; p++) {
 		*p = pattern;
 	}
@@ -111,7 +113,7 @@ bool check_lfsr_pattern(uint32_t seed)
 	volatile uint32_t *p;
 	uint32_t reg;
 
-	Serial.printf("testing with pseudo-random sequence, seed=%u\n", seed);
+	Serial.printf("testing with pseudo-random sequence, seed=%u\r\n", seed);
 	reg = seed;
 	for (p = memory_begin; p < memory_end; p++) {
 		*p = reg;
@@ -130,7 +132,7 @@ bool check_lfsr_pattern(uint32_t seed)
 	for (p = memory_begin; p < memory_end; p++) {
 		uint32_t actual = *p;
 		if (actual != reg) return fail_message(p, actual, reg);
-		//Serial.printf(" reg=%08X\n", reg);
+		//Serial.printf(" reg=%08X\r\n", reg);
 		for (int i=0; i < 3; i++) {
 			if (reg & 1) {
 				reg >>= 1;
@@ -143,10 +145,16 @@ bool check_lfsr_pattern(uint32_t seed)
 	return true;
 }
 
-void loop()
+int main()
 {
-	digitalWrite(13, HIGH);
-	delay(100);
-	if (!memory_ok) digitalWrite(13, LOW); // rapid blink if any test fails
-	delay(100);
+    setup();
+
+    while(true) {
+        digitalWrite(13, HIGH);
+        delay(100);
+        if (!memory_ok) digitalWrite(13, LOW); // rapid blink if any test fails
+        delay(100);
+    }
+
+    return 0;
 }
